@@ -1,3 +1,6 @@
+---
+layout: post
+---
 # Intoduction
 
 In Utreexo, you need to serialize a proof, in conjunction with the usual data. While sending blocks, the straightforward way is to just serialize proofs with blocks. However, while sending transactions, it can be a big overhead to just serialize a proof for each transaction. There are some ways to do that efficiently.

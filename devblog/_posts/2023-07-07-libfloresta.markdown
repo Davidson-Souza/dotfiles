@@ -1,3 +1,6 @@
+---
+layout: post
+---
 # Libfloresta: Bitcoin full node at your fingertips
 ## Summary
  - [Introduction](#introduction)
@@ -8,11 +11,7 @@
     - [What is the current status?](#what-is-the-current-status)
  - [How can I use it?](#how-can-i-use-it)
     - [Creating a node](#creating-a-node)
-    - [Creating a watch-only wallet](#creating-a-watch-only-wallet) (TODO)
-    - [Creating a CLI tool](#creating-a-cli-tool) (TODO)
-    - [Creating a Electrum server](#creating-a-electrum-server) (TODO)
-    - [Creating a Web wallet](#creating-a-web-wallet) (TODO)
-    - [What is next?](#what-is-next) (TODO)
+    - [Creating a watch-only wallet](#creating-a-watch-only-wallet)
  - [FFI bindings](#ffi-bindings)
  - [Integration with other (Rust) projects](#integration-with-other-rust-projects)
  - [Consensus Code](#consensus-code)
@@ -21,9 +20,8 @@
 Floresta is a lightweight Bitcoin full node, powered by Utreexo and written in Rust. The primary goal is to build a full node that is easy to run and maintain, while also being fast and resource efficient. During the development, it was clear that this scope could be expanded. Instead of having just one node, how about having a full suite of tools that can be used to interact with the Bitcoin network? This is where Libfloresta comes in. Libfloresta is a library that provides a set of tools that can be used to interact with the Bitcoin network in a lightweight and simple way.
 
 ## What is Libfloresta?
-Libfloresta provides a series of tools for Bitcoin wallet and application developers, to integrate resource efficient Bitcoin full node functionality into their applications. With Libfloresta, developers can easily integrate Bitcoin full node functionality into their applications, without having to worry about the complexities of running a full node. So any application can give its users full sovereignty over their funds, without having to maintain a separate (and probably overly complicated) server.
-
-As of today, a mobile wallet users needs to either connect to a trusted third-party server, or run a full node on the device at home. The first option is not ideal, as it requires the user to trust the server operator. The second option is also not ideal, as it requires the user to have a device with a lot of storage and processing power, connected all the time with the internet. Libfloresta provides a third option: a lightweight full node that can be run on the mobile device itself, with low footprint and resource usage.
+Libfloresta provides a series of tools to integrate resource efficient Bitcoin full node functionality into any application. With Libfloresta, developers can easily integrate Bitcoin full node functionality into their applications without worrying about the complexities of running a full node. So any application can give its users full sovereignty over their funds without the need to maintain a separate (and probably overly complicated) server.
+As of today, a mobile wallet users needs to either connect to a trusted third-party server, or run a full node on the device at home. The first option is not ideal, as it requires the user to trust the server operator. The second option is also not ideal, as it requires the user to have a device with a lot of storage and processing power, connected all the time with the internet. Libfloresta provides a third option: a lightweight full node that can be run on the mobile device itself, with low footprint and resource usage to a trusted third-party server or run a full node on the device at home.
 
 ### How does it work?
 Libfloresta is composed of a series of extensible crates, that may be used together or separately. The main crate is `libfloresta`, a meta-crate that provides a simple interface to the other crates. The other crates are:
@@ -109,6 +107,7 @@ p2p.run(&Arc::new(RwLock::new(false))).await;
 Here are two important things to notice:
 - We are passing a `Arc<RwLock<bool>>` to the `run` method. This is a stop flag, that will be used to stop the node. If you want to stop the node, just set the value to true. Avoid stopping the node by killing the process, as this may corrupt the database. It is guaranteed that the node will stop gracefully if you set the stop flag to true, after some seconds.
 - This function is async, so you need to call it from an async context. If you are not familiar with async rust, you can use the `tokio` or `async-std` runtimes to run it. Here's a full example using `async-std`:
+
 ```rust
 use async_std::sync::RwLock;
 use bitcoin::BlockHash;
@@ -145,7 +144,9 @@ async fn main() {
     p2p.run(&Arc::new(RwLock::new(false))).await;
 }
 ```
+
 Alternatively, you can just spawn the node in a new thread, and use the handle to interact with it. This is the recommended way to use the node, as it will allow you to use the node in a sync context.
+
 ```rust
 ...
 async_std::spawn(p2p.run(&Arc::new(RwLock::new(false))));
@@ -161,20 +162,76 @@ println!("Block: {:?}", block);
 ```
 
 Just like this, you have a node running. It will connect to the network and start downloading the blockchain. To check if we are synced, we can check the `is_in_ibd` method in the chainstate:
+
 ```rust
 chain.is_in_idb()   // true if we are in IBD, false otherwise
 ```
 
 If you want to stop the node, you can just set the stop flag to true:
+
 ```rust
 *stop_flag.write().await = true;
 ```
 
+### Creating a watch-only wallet
+
+With `libfloresta` you can build watch-only wallet, specially if your application is built over the Electrum protocol. Here's how to create one
+
+```rust
+// This is where we'll store our stuff. We are using one based on Kv here, but can be anything that 
+// implements the AddressCacheDatabase trait.
+let database = KvDatabase::new("/some_path/").expect("Could not create a database");
+// The actual watch-only wallet, for historical reasons, here we call it AddressCache
+// you can rename it if you want.
+let mut address_cache = AddressCache::new(database)
+```
+
+Now that you have a wallet, let's add some addresses for it to follow
+
+```rust
+let address = "bc1q33wtsav397tycfrpsjqae5hke6lc9s7z3n975k";
+wallet.cache_address(Address::from_str(address)).unwrap();
+```
+
+Now you just have to either accept blocks or add unconfirmed transactions.  
+
+If we get a block, just process it as such:
+
+```rust
+use bitcoin::Block;
+
+let block: Block = ...;
+// We need a block and it's heigh
+wallet.block_process(block, height);
+```
+
+or, if you broadcast a new transaction, you can just use `cache_mempool_transaction`
+
+```rust
+wallet.cache_mempool_transaction(tx);
+```
+
+this function will return all coins that conflicts with this tx, like in case of RBF.
+
+#### Fetching data
+
+After you setup a wallet and get some data in it, you can fetch multiple data from it.
+Here are a few methods to get started: 
+- get_address_utxos: Returns all UTXOs associated with a transaction
+- get_cached_transaction: Returns the hex-encoded transaction with this tx_id, if we ever cached it 
+- get_position: The position of a transaction inside a block
+- get_merkle_proof: The merkle proof for a tx in a block (only for confirmed transactions)
+- get_address_balance: The (unconfirmed + confirmed) balance of a address, i.e: amt_in - amt_out
+- get_address_history: All transactions associated to a address
+- find_unconfirmed: Returns all transactions that are still unconfirmed
+
 ## FFI bindings(TODO, actually)
-This project is written in Rust, but it can be used from other languages. We provide a C interface, that can be used from any language that supports C bindings. This interface is generated using `cbindgen`, and it's available in the `ffi` folder. We also provide a Python interface, that can be used from Python. This interface is generated using `pyo3`, and it's available in the `py` folder.
+
+Once we reach a more stable version, we can expose the API to be used in other languages, like Python, JavaScript, Java, etc. The main goal is likely ship something to browsers and mobile, environment that would vastly benefit from Utreexo.
 
 ## Integration with other (Rust) projects
-A planned feature is to integrate this project with other Rust projects, like `rust-lightning` and `bdk`, providing a full stack solution for Bitcoin. This is still a work in progress, though.
+
+This project, in no way pretends to replace the existing rust-bitcoin Bitcoin crates. The main goal here is to bring the power of Utreexo to create compact and simple full nodes that are trivial to integrate and deploy. For wallet tooling and other high-level functions, you'll be better-off with other crates, like `bdk`. A planned feature is to integrate `libfloresta` with other Rust projects, like `rust-lightning` and `bdk`, providing a full stack solution for Bitcoin. This is still a work in progress, though.
 
 ## Consensus code
 One of the most challenging parts of working with Bitcoin is keeping up with the consensus rules. Given it's nature as a consensus protocol, it's very important to make sure that the implementation is correct. Instead of reimplementing a Script interpreter, we use `rust-bitcoinconsensus` to verify transactions. This is a bind around a shared library that is part of Bitcoin Core. This way, we can be sure that the consensus rules are the same as Bitcoin Core, at least for scripts.

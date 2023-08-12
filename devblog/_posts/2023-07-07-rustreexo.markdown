@@ -1,3 +1,8 @@
+---
+layout: post
+categories: [bitcoin, utreexo]
+---
+
 # Rustreexo: A Rust implementation of Utreexo in pure Rust
 
 ## Summary

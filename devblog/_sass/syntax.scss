@@ -1,0 +1,25 @@
+pre {
+  border: none;
+  font-size: 90%;
+  margin-bottom: 2em;
+}
+
+.highlight {
+  background-color: #f7f7f7;
+  border: 1px solid #ddd;
+  border-left: 3px solid #666;
+  margin: 0.5em 0;
+  padding: 1em;
+  overflow: auto;
+}
+
+.highlight .kd {
+  color: #0077aa;
+}
+
+.highlight .nf {
+  color: #c41a16;
+}
+
+/* Add more styles as needed */
+
