@@ -26,7 +26,7 @@ Em um sistema de UTXO, os fundos vivem em pequenas Moedas, que possuem um valor 
 ![Como uma transação funciona](/assets/Bitcoin-Transaction.png)
 
 Com isso em mente, retomemos o caso onde Alice envia fundos para Bob. Como Bob estaria certo de que ele realmente recebeu seus fundos, e não um cheque sem fundo? Bom, Bob precisa buscar pelas saídas que Alice diz possuir (as entradas), se elas não existem, Alice está mentindo. Se elas existem, prossiga da seguinte maneira:
-Verifique se a soma das é maior ou igual a soma das saídas (caso contrário, Alice estaria criando dinheiro do nada).
+Verifique se a soma das entradas é maior ou igual a soma das saídas (caso contrário, Alice estaria criando dinheiro do nada).
 
 Verifique se Alice realmente é dona das UTXOs. Isso é efetuado verificando-se a assinatura digital que vem junto à transação.
 Se tudo ocorrer bem, então a transação é valida.
