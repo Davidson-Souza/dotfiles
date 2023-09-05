@@ -1,0 +1,28 @@
+# Maintainer:   Davidson Souza
+
+pkgname=python-rustreexo-git
+pkgver=1.r144.g2a918fa
+pkgrel=1
+
+pkgdesc='Python FFI bindings for rustreexo'
+arch=('any')
+url='https://github.com/mit-dci/rustreexo'
+license=('MIT')
+
+depends=('python-cffi' 'python-pycparser' 'coreutils' 'librustreexo')
+provides=('python-librustreexo-git' 'python-librustreexo')
+conflicts=('python-librustreexo' 'python-librustreexo-git')
+
+source=('git+https://github.com/Davidson-Souza/rustreexo#branch=python-bindings')
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$srcdir/rustreexo/c-rustreexo/"
+    # Append "1." to force update over previous repo versions
+    echo -n "1.r$(git rev-list --all --count).g$(git rev-parse --short HEAD)"
+}
+
+package() {
+    cd "$srcdir/rustreexo/pytreexo"
+    env PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring python setup.py install --root="$pkgdir/" --optimize=1 --prefix=/usr
+}

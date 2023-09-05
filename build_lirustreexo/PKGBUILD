@@ -1,0 +1,39 @@
+# Maintainer: Davidson-Souza <davidson.lucas.souza@outlook.com>
+
+pkgname=rustreexo-git
+pkgver=r1.dbb3ab6
+pkgrel=1
+pkgdesc="FFI bindings to the rustreexo lib, providing the utreexo functionality for other languages"
+arch=('any')
+url='https://github.com/Davidson-Souza/rustreexo#branch=python-bindings'
+license=('MIT')
+makedepends=('cargo' 'git' 'rust')
+provides=("librustreexo")
+
+source=('git+https://github.com/Davidson-Souza/rustreexo#branch=feature/c-bindings')
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$srcdir/$rustreexo/"
+    # check sig for the latest commit
+    git verify-commit HEAD &>/dev/null
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    cd "${srcdir}/rustreexo/c-rustreexo/"
+    cargo build --release
+}
+
+package() {
+    cd "${srcdir}/rustreexo/"                                                
+    # install the object files
+    install -Dm 755 "target/release/librustreexo.so" "${pkgdir}/usr/lib/librustreexo.so.1"
+    install -Dm 755 "target/release/librustreexo.a" "${pkgdir}/usr/lib/librustreexo.a.1"
+    # headers
+    for file in $(ls "c-rustreexo/include/"); do
+        install -Dm 644 "c-rustreexo/include/$file" "${pkgdir}/usr/include/librustreexo/${file}"
+    done
+    # license
+    install -Dm 644 LICENSE "${pkgdir}/usr/share/licenses/librustreexo/LICENSE"
+}
